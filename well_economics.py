@@ -5,6 +5,7 @@ import plotly.express as px
 from scipy.optimize import curve_fit
 import plotly.express as px
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from sklearn.metrics import mean_squared_error
 
 
@@ -50,7 +51,7 @@ def fit_hyperbolic_curve(df,start_index,scale, p_months):
     
     #st.write(projection)
     proj_df = pd.DataFrame(projection)
-    
+    proj_df = pd.DataFrame(projection,columns=["Projection"])
 
     st.write(f"Initial Production = {qi.round(2)}, b_0 = {b_fit.round(2)}, Initial decline = {di_fit.round(4)*100}%")
 
@@ -59,6 +60,7 @@ def fit_hyperbolic_curve(df,start_index,scale, p_months):
         'Production': production,
         'Fitted Production': production_fit[:len(dates)]
     }
+    
     mse = mean_squared_error(all_data["Production"], all_data["Fitted Production"])
     rmse = np.sqrt(mse)
     st.write(f"RMSE = {rmse}")
@@ -66,11 +68,16 @@ def fit_hyperbolic_curve(df,start_index,scale, p_months):
     fig = px.line(all_data, x = all_data["Dates"], y = ["Production","Fitted Production"],log_y = scale,title = "Fitted Curve")
     st.plotly_chart(fig)
     
-    fig2 = px.line(proj_df, x = proj_df.index, y = proj_df[0],log_y = scale,title = "Projected Curve")
+    date_format = "%m/%d/%Y"
+    start_date = datetime.strptime(all_data["Dates"].iloc[-1], date_format)
+    proj_dates  = [start_date.strftime(date_format)] + [(start_date + relativedelta(months=1 * i)).strftime(date_format) for i in range(1, len(projection))]
+    proj_df["Dates"] = proj_dates
+    
+    fig2 = px.line(proj_df, x = proj_df.index, y = proj_df["Projection"],log_y = scale,title = "Projected Curve")
     fig2.update_xaxes(title_text="Month")
     fig2.update_yaxes(title_text="Production")
     st.plotly_chart(fig2)
-    return projection
+    return proj_df
 
 def fit_exponential_curve(df,start_index,scale, p_months):
     """
@@ -115,8 +122,8 @@ def fit_exponential_curve(df,start_index,scale, p_months):
     #st.write(time_fit, projection_time)
     #st.write(projection)
 
-    proj_df = pd.DataFrame(projection)
-
+    proj_df = pd.DataFrame(projection,columns=["Projection"])
+    
     st.write(f"Initial Production = {qi.round(2)}, Terminal decline = {d_fit.round(4)*100}%")
     
     all_data = {
@@ -132,13 +139,19 @@ def fit_exponential_curve(df,start_index,scale, p_months):
     fig = px.line(all_data, x = all_data["Dates"], y = ["Production","Fitted Production"],log_y = scale,title = "Fitted Curve")
     st.plotly_chart(fig)
     
-    fig2 = px.line(proj_df, x = proj_df.index, y = proj_df[0],log_y = scale,title = "Projected Curve")
+    
+    date_format = "%m/%d/%Y"
+    start_date = datetime.strptime(all_data["Dates"].iloc[-1], date_format)
+    proj_dates  = [start_date.strftime(date_format)] + [(start_date + relativedelta(months=1 * i)).strftime(date_format) for i in range(1, len(projection))]
+    proj_df["Dates"] = proj_dates
+    
+    
+    fig2 = px.line(proj_df, x = proj_dates, y = proj_df["Projection"],log_y = scale,title = "Projected Curve")
     fig2.update_xaxes(title_text="Month")
     fig2.update_yaxes(title_text="Production")
     st.plotly_chart(fig2)
 
-
-    return projection
+    return proj_df
 
 
 st.write('**Upload a file with the columns "Date" and any of "Oil", "Gas", and "Water" ("Date" is assumed to be monthly)**')
@@ -149,6 +162,9 @@ if uploaded_file is not None:
     if "Date" not in df.columns:
         st.error("Please upload a file with a date column.")
 
+    with st.expander("Show uploaded data"):
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    
     tab1, tab2, tab3 = st.tabs(["Production","Cash Flow","Summary"])
     with tab1:
         c1, c2 = st.columns(2)
@@ -183,5 +199,5 @@ if uploaded_file is not None:
 
 
 
-st.subheader("Projected Production")
-st.write(projection)
+    st.subheader("Projected Production")
+    st.write(projection)
