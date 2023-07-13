@@ -112,8 +112,9 @@ def fit_exponential_curve(df,start_index,scale, p_months):
     projection_time = np.linspace(max(time_fit) ,int(round(max(time)+p_months*30.437,0)),p_months+1)
 
     projection = exponential_decline(projection_time, d_fit)
-    st.write(time_fit, projection_time)
+    #st.write(time_fit, projection_time)
     #st.write(projection)
+
     proj_df = pd.DataFrame(projection)
 
     st.write(f"Initial Production = {qi.round(2)}, Terminal decline = {d_fit.round(4)*100}%")
@@ -135,6 +136,8 @@ def fit_exponential_curve(df,start_index,scale, p_months):
     fig2.update_xaxes(title_text="Month")
     fig2.update_yaxes(title_text="Production")
     st.plotly_chart(fig2)
+
+
     return projection
 
 
@@ -146,14 +149,39 @@ if uploaded_file is not None:
     if "Date" not in df.columns:
         st.error("Please upload a file with a date column.")
 
-    decline_type = st.radio("**Choose decline type:**",options=["Hyperbolic","Exponential"],index = 0,horizontal=True)
-    starting_index = st.number_input("**Choose the index of the initial production:**",min_value = 0, max_value = len(df["Date"]),step=1)
-    scale_metric = st.checkbox("**Use log scale**",value = True)
-    projection_months = st.number_input("**Months to project**",min_value = 12, max_value = 120, value = 60)
-    if decline_type == "Hyperbolic":
-        projection = fit_hyperbolic_curve(df,start_index = starting_index,scale = scale_metric,p_months = projection_months)
-    else:
-        projection = fit_exponential_curve(df,start_index = starting_index,scale = scale_metric,p_months = projection_months)
+    tab1, tab2, tab3 = st.tabs(["Production","Cash Flow","Summary"])
+    with tab1:
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            starting_index = st.number_input("**Choose the index of the initial production:**",min_value = 0, max_value = len(df["Date"]),step=1)
+            decline_type = st.radio("**Choose decline type:**",options=["Hyperbolic","Exponential"],index = 0,horizontal=True)
 
-st.subheader("Projected_Production")
+        with c2:
+            projection_months = st.number_input("**Months to project**",min_value = 12, max_value = 120, value = 60)
+            scale_metric = st.checkbox("**Use log scale**",value = True)
+        st.divider()
+        if decline_type == "Hyperbolic":
+            projection = fit_hyperbolic_curve(df,start_index = starting_index,scale = scale_metric,p_months = projection_months)
+        else:
+            projection = fit_exponential_curve(df,start_index = starting_index,scale = scale_metric,p_months = projection_months)
+
+    with tab2:
+        co1, co2, co3 = st.columns(3)
+        with co1:
+            oil_price = st.number_input("Oil Price",min_value = 20, max_value = 200, value = 60,step = 1)
+            st.number_input("Average Operating Expenses",min_value = 1000, max_value = 100000, value = 7000, step = 50)
+        with co2:
+            st.number_input("Gas/Oil Ratio (MCF/bbl)", max_value = 10.00,min_value = 0.00, value = 1.00, step = .05)
+            st.number_input("Plugging Costs", min_value = 0, max_value = 200000, value = 60000, step = 1000)
+        with co3:
+            gas_price = st.number_input("Gas Price",min_value = 0.0, max_value = 10.0, value = 3.0,step = .1)
+
+        st.slider("Choose months to use for cash flows", 1,len(projection), (1,len(projection)))
+
+        st.divider()
+
+
+
+st.subheader("Projected Production")
 st.write(projection)
